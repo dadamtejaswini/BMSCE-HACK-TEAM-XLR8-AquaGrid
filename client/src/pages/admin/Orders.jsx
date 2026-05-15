@@ -5,6 +5,8 @@ import { STATUS_CONFIG, WARDS_DATA } from '../../data/wards';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export default function Orders() {
   const toast = useToast();
   const [bookings, setBookings] = useState([]);
@@ -35,12 +37,20 @@ export default function Orders() {
   );
 
   const updateStatus = async (booking, newStatus) => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('water_bookings').update({ status: newStatus }).eq('id', booking.id);
-      if (error) return toast.error('Update failed');
+    try {
+      // Call server API so it can trigger emails (e.g. delivery confirmation)
+      const res = await fetch(`${API_URL}/api/bookings/${booking.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const result = await res.json();
+      if (result.error) return toast.error('Update failed: ' + result.error);
+      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b));
+      toast.success(`${booking.booking_id} → ${STATUS_CONFIG[newStatus]?.label}`);
+    } catch (err) {
+      toast.error('Update failed');
     }
-    setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b));
-    toast.success(`${booking.booking_id} → ${STATUS_CONFIG[newStatus]?.label}`);
   };
 
   const exportCSV = () => {

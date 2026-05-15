@@ -36,6 +36,31 @@ function LandingMapClickHandler({ onWardClick }) {
   return null;
 }
 
+// Ward name labels — visible at zoom 12+
+function WardLabels({ wards }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !wards || wards.length === 0) return;
+    const markers = wards.map(w => {
+      const icon = L.divIcon({
+        html: `<span style="font-size:11px;font-weight:600;color:#ffffff;text-shadow:0 1px 3px rgba(0,0,0,0.8);white-space:nowrap;pointer-events:none;">${w.ward_name}</span>`,
+        className: '',
+        iconAnchor: [0, 0],
+      });
+      return L.marker([w.lat, w.lng], { icon, interactive: false, zIndexOffset: 1000 });
+    });
+    const labelGroup = L.layerGroup(markers);
+    const toggle = () => {
+      if (map.getZoom() >= 12) { if (!map.hasLayer(labelGroup)) labelGroup.addTo(map); }
+      else { if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup); }
+    };
+    toggle();
+    map.on('zoomend', toggle);
+    return () => { map.off('zoomend', toggle); if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup); };
+  }, [map, wards]);
+  return null;
+}
+
 // Water ripple background component
 function WaterRipples() {
   return (
@@ -325,6 +350,7 @@ export default function Landing() {
               />
               {userLocation && <FlyToLocation lat={userLocation.lat} lng={userLocation.lng} />}
               <LandingHeatmapLayer wards={WARDS_DATA} />
+              <WardLabels wards={WARDS_DATA} />
               <LandingMapClickHandler onWardClick={setSelectedWard} />
               {/* User location pin */}
               {userLocation && (

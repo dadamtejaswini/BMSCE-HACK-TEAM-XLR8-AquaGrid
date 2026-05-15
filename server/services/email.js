@@ -221,10 +221,47 @@ async function sendQueryResolved(user, query) {
   }
 }
 
+// EMAIL 6 — Dedicated Delivery Confirmation
+async function sendDeliveryConfirmationEmail(email, { bookingId, ward, litres, deliveredAt }) {
+  if (!resend) {
+    console.log('📧 [Mock] Delivery confirmation to', email, '| Booking:', bookingId);
+    return;
+  }
+
+  const formattedDate = deliveredAt
+    ? new Date(deliveredAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Your AquaGrid water order has been delivered ✅',
+      html: emailTemplate(`
+        <h2 style="color:#10B981;margin:0 0 16px">✅ Water Delivered Successfully</h2>
+        <p style="color:#9FB7C8">Great news! Your water delivery has been completed.</p>
+        <div style="background:#0d2230;border:1px solid #3E5F78;border-radius:12px;padding:20px;margin:16px 0">
+          <p style="color:#9FB7C8;margin:4px 0">📋 Booking ID: <strong style="color:#ffffff">${bookingId}</strong></p>
+          <p style="color:#9FB7C8;margin:4px 0">📍 Ward: <strong style="color:#ffffff">${ward || 'N/A'}</strong></p>
+          <p style="color:#9FB7C8;margin:4px 0">💧 Quantity: <strong style="color:#ffffff">${litres || 'N/A'}</strong></p>
+          <p style="color:#9FB7C8;margin:4px 0">🕐 Delivered at: <strong style="color:#ffffff">${formattedDate}</strong></p>
+        </div>
+        <p style="color:#9FB7C8">We hope you're satisfied with the service. Please take a moment to share your feedback — it helps us improve!</p>
+        ${ctaButton('⭐ Leave Feedback →', `${APP_URL}/my-orders`)}
+        <p style="color:#9FB7C8;text-align:center;font-size:13px">Having a problem? <a href="${APP_URL}/my-orders" style="color:#9FB7C8;text-decoration:underline">Raise a Query →</a></p>
+      `),
+    });
+    console.log('📧 Delivery confirmation sent to', email, '| Booking:', bookingId);
+  } catch (err) {
+    console.error('📧 Delivery confirmation failed:', err.message);
+  }
+}
+
 module.exports = {
   sendWelcomeEmail,
   sendBookingConfirmation,
   sendStatusEmail,
+  sendDeliveryConfirmationEmail,
   sendRiskAlert,
   sendQueryAcknowledgement,
   sendQueryResolved,

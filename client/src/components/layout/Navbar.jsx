@@ -11,22 +11,22 @@ const LANGUAGES = [
 ];
 
 const navLinks = [
-  { path: '/', label: 'Home' },
-  { path: '/map', label: 'Map' },
-  { path: '/forecast', label: 'Forecast' },
-  { path: '/compare', label: 'Compare' },
+  { path: '/', label: 'nav.home' },
+  { path: '/map', label: 'nav.map' },
+  { path: '/forecast', label: 'nav.forecast' },
+  { path: '/compare', label: 'nav.compare' },
 ];
 
 const protectedLinks = [
-  { path: '/book-water', label: 'Book Water' },
-  { path: '/my-orders', label: 'My Orders' },
+  { path: '/book-water', label: 'nav.bookWater' },
+  { path: '/my-orders', label: 'nav.myOrders' },
 ];
 
 const adminLinks = [
-  { path: '/admin', label: 'Dashboard' },
-  { path: '/admin/orders', label: 'Orders' },
-  { path: '/admin/map', label: 'Admin Map' },
-  { path: '/admin/users', label: 'Users' },
+  { path: '/admin', label: 'nav.dashboard' },
+  { path: '/admin/orders', label: 'nav.orders' },
+  { path: '/admin/map', label: 'nav.adminMap' },
+  { path: '/admin/users', label: 'nav.users' },
 ];
 
 export default function Navbar() {
@@ -65,7 +65,7 @@ export default function Navbar() {
                     : 'text-slate-400 hover:text-blue-300 hover:bg-slate-800/60'
                   }`}
               >
-                {link.label}
+                {t(link.label)}
               </Link>
             ))}
 
@@ -79,7 +79,7 @@ export default function Navbar() {
                     : 'text-slate-400 hover:text-blue-300 hover:bg-slate-800/60'
                   }`}
               >
-                {link.label}
+                {t(link.label)}
               </Link>
             ))}
 
@@ -94,7 +94,7 @@ export default function Navbar() {
                       : 'text-slate-400 hover:text-blue-300 hover:bg-slate-800/60'
                     }`}
                 >
-                  Admin ▾
+                  {t('nav.admin')} ▾
                 </button>
                 <AnimatePresence>
                   {adminMenuOpen && (
@@ -111,7 +111,7 @@ export default function Navbar() {
                           onClick={() => setAdminMenuOpen(false)}
                           className="block px-4 py-2 text-sm text-slate-300 hover:text-blue-300 hover:bg-slate-700/60 transition-colors"
                         >
-                          {link.label}
+                          {t(link.label)}
                         </Link>
                       ))}
                     </motion.div>
@@ -203,7 +203,7 @@ export default function Navbar() {
                     className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all
                       ${isActive(link.path) ? 'text-cyan-400 bg-blue-500/10' : 'text-slate-400 hover:text-blue-300'}`}
                   >
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 ))}
 
@@ -215,13 +215,13 @@ export default function Navbar() {
                     className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all
                       ${isActive(link.path) ? 'text-cyan-400 bg-blue-500/10' : 'text-slate-400 hover:text-blue-300'}`}
                   >
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 ))}
 
                 {isAdmin && (
                   <>
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Admin</div>
+                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('nav.admin')}</div>
                     {adminLinks.map(link => (
                       <Link
                         key={link.path}
@@ -229,7 +229,7 @@ export default function Navbar() {
                         onClick={() => setMobileOpen(false)}
                         className="block px-4 py-3 rounded-lg text-sm text-slate-400 hover:text-blue-300"
                       >
-                        {link.label}
+                        {t(link.label)}
                       </Link>
                     ))}
                   </>
@@ -238,15 +238,15 @@ export default function Navbar() {
                 <div className="pt-4 border-t border-blue-800/30 space-y-2 px-4">
                   {isAuthenticated ? (
                     <button onClick={() => { signOut(); setMobileOpen(false); }} className="w-full btn-secondary text-sm">
-                      Sign Out
+                      {t('nav.signOut')}
                     </button>
                   ) : (
                     <>
                       <button onClick={() => { demoLogin(); setMobileOpen(false); }} className="w-full btn-secondary text-sm !border-cyan-600/40 !text-cyan-400">
-                        Demo Login
+                        {t('nav.demoLogin')}
                       </button>
-                      <Link to="/login" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-secondary text-sm">Login</Link>
-                      <Link to="/register" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">Register</Link>
+                      <Link to="/login" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-secondary text-sm">{t('nav.login')}</Link>
+                      <Link to="/register" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">{t('nav.register')}</Link>
                     </>
                   )}
                 </div>

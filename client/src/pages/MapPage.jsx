@@ -32,6 +32,51 @@ function HeatmapLayer({ wards }) {
   return null;
 }
 
+// Ward name labels — visible at zoom 12+
+function WardLabels({ wards }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !wards || wards.length === 0) return;
+
+    const markers = wards.map(w => {
+      const icon = L.divIcon({
+        html: `<span style="
+          font-size:11px;
+          font-weight:600;
+          color:#ffffff;
+          text-shadow:0 1px 3px rgba(0,0,0,0.8);
+          white-space:nowrap;
+          pointer-events:none;
+        ">${w.ward_name}</span>`,
+        className: '',
+        iconAnchor: [0, 0],
+      });
+      return L.marker([w.lat, w.lng], { icon, interactive: false, zIndexOffset: 1000 });
+    });
+
+    const labelGroup = L.layerGroup(markers);
+
+    const toggleLabels = () => {
+      if (map.getZoom() >= 12) {
+        if (!map.hasLayer(labelGroup)) labelGroup.addTo(map);
+      } else {
+        if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup);
+      }
+    };
+
+    toggleLabels();
+    map.on('zoomend', toggleLabels);
+
+    return () => {
+      map.off('zoomend', toggleLabels);
+      if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup);
+    };
+  }, [map, wards]);
+
+  return null;
+}
+
 // Click handler to find nearest ward
 function MapClickHandler({ onWardClick }) {
   const map = useMap();
@@ -156,6 +201,7 @@ export default function MapPage() {
               <MapContainer center={BENGALURU_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution='&copy; CARTO' />
                 <HeatmapLayer wards={filtered} />
+                <WardLabels wards={filtered} />
                 <MapClickHandler onWardClick={setSelected} />
               </MapContainer>
 

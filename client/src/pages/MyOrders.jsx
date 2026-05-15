@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { MOCK_BOOKINGS } from '../data/mockData';
 import { STATUS_STEPS, STATUS_CONFIG, TIME_SLOTS, QUANTITY_OPTIONS } from '../data/wards';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import QueryModal from '../components/QueryModal';
+import { useToast } from '../context/ToastContext';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function StatusStepper({ currentStatus }) {
   const currentIdx = STATUS_STEPS.indexOf(currentStatus);
@@ -37,12 +40,127 @@ function StatusStepper({ currentStatus }) {
   );
 }
 
+/* ─── Inline Feedback Modal ─── */
+function FeedbackModal({ booking, onClose, onSubmitted }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (rating === 0) { toast.error('Please select a rating'); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: profile?.id,
+          booking_id: booking.id,
+          rating,
+          comment,
+          display_public: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Thank you for your feedback!');
+        onSubmitted(booking.id);
+        onClose();
+      } else {
+        toast.error(data.error || 'Failed to submit feedback');
+      }
+    } catch (err) {
+      toast.error('Something went wrong');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const starLabels = ['Poor', 'Below Average', 'Average', 'Good', 'Excellent'];
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="glass-card p-6 w-full max-w-md space-y-5"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-white">Leave Feedback</h3>
+            <button onClick={onClose} className="text-slate-500 hover:text-white text-xl transition-colors">&times;</button>
+          </div>
+
+          <p className="text-sm text-slate-400">
+            Order <span className="text-cyan-400 font-mono font-semibold">{booking.booking_id}</span> — {booking.ward_name}
+          </p>
+
+          {/* Star Rating */}
+          <div className="text-center">
+            <p className="text-sm text-slate-400 mb-2">How was your experience?</p>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className="text-3xl transition-transform hover:scale-125 focus:outline-none"
+                >
+                  <span className={star <= (hoverRating || rating) ? 'text-amber-400' : 'text-slate-600'}>★</span>
+                </button>
+              ))}
+            </div>
+            {(hoverRating || rating) > 0 && (
+              <p className="text-xs text-amber-400 mt-1">{starLabels[(hoverRating || rating) - 1]}</p>
+            )}
+          </div>
+
+          {/* Comment */}
+          <textarea
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder="Tell us about your experience (optional)..."
+            rows={3}
+            className="input-field w-full resize-none"
+          />
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancel</button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || rating === 0}
+              className="btn-primary flex-1 text-sm disabled:opacity-50"
+            >
+              {submitting ? 'Submitting...' : '⭐ Submit Feedback'}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function MyOrders() {
   const { profile } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState({});
   const [queryModal, setQueryModal] = useState({ open: false, bookingId: null });
+  const [feedbackModal, setFeedbackModal] = useState({ open: false, booking: null });
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -55,13 +173,14 @@ export default function MyOrders() {
             .order('created_at', { ascending: false });
           setBookings(data && data.length > 0 ? data : MOCK_BOOKINGS);
 
-          // Check which bookings have feedback
+          // Check which bookings already have feedback
           if (data && data.length > 0) {
             const bookingIds = data.filter(b => b.status === 'delivered').map(b => b.id);
             if (bookingIds.length > 0) {
               const { data: fbData } = await supabase
                 .from('feedback')
                 .select('booking_id')
+                .eq('user_id', profile.id)
                 .in('booking_id', bookingIds);
               const fbMap = {};
               fbData?.forEach(f => { fbMap[f.booking_id] = true; });
@@ -90,6 +209,11 @@ export default function MyOrders() {
       return () => supabase.removeChannel(channel);
     }
   }, [profile]);
+
+  // Optimistic update: mark feedback as submitted locally
+  const handleFeedbackSubmitted = (bookingId) => {
+    setFeedbackSubmitted(prev => ({ ...prev, [bookingId]: true }));
+  };
 
   if (loading) return (
     <div className="page-wrapper section-container py-12">
@@ -122,6 +246,7 @@ export default function MyOrders() {
               const qty = QUANTITY_OPTIONS.find(q => q.value === b.quantity);
               const slot = TIME_SLOTS.find(s => s.value === b.delivery_slot);
               const hasFeedback = feedbackSubmitted[b.id];
+              const canLeaveFeedback = b.status === 'delivered' && !hasFeedback;
               return (
                 <motion.div key={b.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
@@ -139,10 +264,13 @@ export default function MyOrders() {
                     </div>
                     <div className="text-right space-y-2">
                       {qty && <div className="text-lg font-bold text-cyan-400">₹{qty.price}</div>}
-                      {b.status === 'delivered' && !hasFeedback && (
-                        <Link to={`/feedback/${b.id}`} className="inline-block text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors">
+                      {canLeaveFeedback && (
+                        <button
+                          onClick={() => setFeedbackModal({ open: true, booking: b })}
+                          className="inline-block text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors"
+                        >
                           ⭐ Leave Feedback
-                        </Link>
+                        </button>
                       )}
                       {hasFeedback && (
                         <span className="text-xs text-emerald-400">✅ Feedback submitted</span>
@@ -170,6 +298,15 @@ export default function MyOrders() {
         onClose={() => setQueryModal({ open: false, bookingId: null })}
         bookingId={queryModal.bookingId}
       />
+
+      {/* Inline Feedback Modal */}
+      {feedbackModal.open && feedbackModal.booking && (
+        <FeedbackModal
+          booking={feedbackModal.booking}
+          onClose={() => setFeedbackModal({ open: false, booking: null })}
+          onSubmitted={handleFeedbackSubmitted}
+        />
+      )}
     </div>
   );
 }

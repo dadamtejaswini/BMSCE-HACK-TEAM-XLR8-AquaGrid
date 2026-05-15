@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { supabaseAdmin } = require('../lib/supabase');
-const { sendBookingConfirmation, sendStatusEmail } = require('../services/email');
+const { sendBookingConfirmation, sendStatusEmail, sendDeliveryConfirmationEmail } = require('../services/email');
 
 router.post('/', async (req, res) => {
   try {
@@ -51,11 +51,22 @@ router.put('/:id/status', async (req, res) => {
       .update({ status }).eq('id', req.params.id).select().single();
     if (error) return res.status(400).json({ error: error.message });
 
-    // Send status update email
+    // Send emails on status change
     if (data && data.user_id) {
       const { data: userData } = await supabaseAdmin.from('users').select('*').eq('id', data.user_id).single();
       if (userData) {
+        // Generic status email (confirmed, out_for_delivery, cancelled, etc.)
         await sendStatusEmail(userData, data, status);
+
+        // Dedicated delivery confirmation email when delivered
+        if (status === 'delivered') {
+          await sendDeliveryConfirmationEmail(userData.email, {
+            bookingId: data.booking_id,
+            ward: data.ward_name,
+            litres: data.quantity,
+            deliveredAt: new Date().toISOString(),
+          });
+        }
       }
     }
 
@@ -66,3 +77,4 @@ router.put('/:id/status', async (req, res) => {
 });
 
 module.exports = router;
+
