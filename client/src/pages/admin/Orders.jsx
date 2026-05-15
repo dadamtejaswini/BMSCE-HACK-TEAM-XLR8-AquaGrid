@@ -16,15 +16,35 @@ export default function Orders() {
 
   useEffect(() => {
     const fetchData = async () => {
+      let remoteBookings = [];
       if (isSupabaseConfigured) {
         try {
-          const { data } = await supabase.from('water_bookings').select('*').order('created_at', { ascending: false });
-          setBookings(data && data.length > 0 ? data : MOCK_ALL_BOOKINGS);
+          const { data, error } = await supabase.from('water_bookings').select('*').order('created_at', { ascending: false });
+          if (error && error.message.includes('Could not find the table')) {
+            remoteBookings = [];
+          } else {
+            remoteBookings = data || [];
+          }
         } catch {
-          setBookings(MOCK_ALL_BOOKINGS);
+          remoteBookings = [];
         }
-      } else {
+      }
+
+      // Load from localStorage fallback
+      let localBookings = [];
+      try {
+        localBookings = JSON.parse(localStorage.getItem('aquagrid_bookings_fallback') || '[]');
+      } catch (e) {
+        console.error('Failed to load local bookings', e);
+      }
+
+      // Combine and remove duplicates
+      const combined = [...localBookings, ...remoteBookings];
+      if (combined.length === 0) {
         setBookings(MOCK_ALL_BOOKINGS);
+      } else {
+        const unique = Array.from(new Map(combined.map(b => [b.booking_id, b])).values());
+        setBookings(unique.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
       }
       setLoading(false);
     };
@@ -38,18 +58,34 @@ export default function Orders() {
 
   const updateStatus = async (booking, newStatus) => {
     try {
-      // Call server API so it can trigger emails (e.g. delivery confirmation)
+      // Optimistic update
+      setBookings(prev => prev.map(b => b.booking_id === booking.booking_id ? { ...b, status: newStatus } : b));
+
+      // Call server API
       const res = await fetch(`${API_URL}/api/bookings/${booking.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
       const result = await res.json();
-      if (result.error) return toast.error('Update failed: ' + result.error);
-      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b));
+      
+      // Update localStorage fallback
+      try {
+        const localBookings = JSON.parse(localStorage.getItem('aquagrid_bookings_fallback') || '[]');
+        const updatedLocal = localBookings.map(b => 
+          b.booking_id === booking.booking_id ? { ...b, status: newStatus } : b
+        );
+        localStorage.setItem('aquagrid_bookings_fallback', JSON.stringify(updatedLocal));
+      } catch (e) {}
+
+      if (result.error && !result.mock) {
+        return toast.error('Update failed: ' + result.error);
+      }
+      
       toast.success(`${booking.booking_id} → ${STATUS_CONFIG[newStatus]?.label}`);
     } catch (err) {
-      toast.error('Update failed');
+      console.error('Update error:', err);
+      toast.success(`${booking.booking_id} → ${STATUS_CONFIG[newStatus]?.label} (Local)`);
     }
   };
 

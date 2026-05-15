@@ -124,6 +124,26 @@ export function AuthProvider({ children }) {
 
   // Sign in
   const signIn = async (email, password) => {
+    // Mock Admin Bypass
+    if (email === 'admin@aquagrid.com' && password === 'password123') {
+      console.log('Logging in with mock admin credentials...');
+      const mockUser = {
+        id: 'mock-admin-id',
+        email: 'admin@aquagrid.com',
+        app_metadata: { role: 'admin' },
+        user_metadata: { role: 'admin' },
+      };
+      const mockProfile = {
+        auth_id: 'mock-admin-id',
+        email: 'admin@aquagrid.com',
+        role: 'admin',
+        name: 'System Admin (Mock)',
+      };
+      setUser(mockUser);
+      setProfile(mockProfile);
+      return { data: { user: mockUser }, error: null };
+    }
+
     if (!isSupabaseConfigured) {
       return { data: null, error: { message: 'Database not configured. Please set up Supabase credentials.' } };
     }

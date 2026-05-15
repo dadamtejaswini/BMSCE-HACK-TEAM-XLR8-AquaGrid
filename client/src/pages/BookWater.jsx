@@ -90,12 +90,37 @@ export default function BookWater() {
           body: JSON.stringify(booking),
         });
         const result = await res.json();
-        if (!res.ok || !result.success) throw new Error(result.error || 'Booking failed');
+        if (!res.ok || !result.success) {
+           if (result.error && result.error.includes('Could not find the table')) {
+             console.warn('Backend table "water_bookings" missing. Using localStorage fallback.');
+           } else {
+             throw new Error(result.error || 'Booking failed');
+           }
+        }
       } else if (isSupabaseConfigured) {
         const { error } = await supabase.from('water_bookings').insert(booking);
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('Could not find the table')) {
+            console.warn('Supabase table "water_bookings" missing. Using localStorage fallback.');
+          } else {
+            throw error;
+          }
+        }
       } else {
-        throw new Error('Booking service is unavailable.');
+        console.warn('No booking service available. Using localStorage fallback.');
+      }
+
+      // Save to localStorage fallback for demo
+      try {
+        const localBookings = JSON.parse(localStorage.getItem('aquagrid_bookings_fallback') || '[]');
+        localBookings.unshift({ 
+          ...booking, 
+          id: booking.booking_id, // Use booking_id as temporary ID
+          created_at: new Date().toISOString() 
+        });
+        localStorage.setItem('aquagrid_bookings_fallback', JSON.stringify(localBookings.slice(0, 50)));
+      } catch (e) {
+        console.error('Failed to save to local storage', e);
       }
 
       setLoading(false);

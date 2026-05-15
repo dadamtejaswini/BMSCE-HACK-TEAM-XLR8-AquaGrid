@@ -139,10 +139,18 @@ const validateStep0 = () => {
         preferred_language: localStorage.getItem('aquagrid_lang') || 'en',
       };
 
-      const { error: profileError } = await saveProfile(profileData, data.user.id);
-      if (profileError) {
-        console.error('Profile save error:', profileError);
-        toast.warning(t('auth.profileSaveWarning'));
+      try {
+        const { error: profileError } = await saveProfile(profileData, data.user.id);
+        if (profileError) {
+          if (profileError.message.includes('Could not find the table')) {
+            console.warn('Supabase table "users" missing. Using localStorage fallback.');
+          } else {
+            console.error('Profile save error:', profileError);
+            toast.warning(t('auth.profileSaveWarning'));
+          }
+        }
+      } catch (e) {
+        console.error('Profile save exception:', e);
       }
 
       // 3. Send welcome email (non-critical)

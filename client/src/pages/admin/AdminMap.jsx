@@ -1,14 +1,96 @@
-import { useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup } from 'react-leaflet';
+import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet.heat';
 import { motion } from 'framer-motion';
-import { WARDS_DATA, RISK_COLORS, RISK_OPACITY, BENGALURU_CENTER } from '../../data/wards';
+import { WARDS_DATA, RISK_COLORS, BENGALURU_CENTER, DEFAULT_ZOOM, HEATMAP_OPTIONS } from '../../data/wards';
 import { useToast } from '../../context/ToastContext';
+
+// Custom Heatmap Layer component
+function HeatmapLayer({ points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points || points.length === 0) return;
+    const heat = L.heatLayer(points, HEATMAP_OPTIONS).addTo(map);
+    return () => map.removeLayer(heat);
+  }, [map, points]);
+
+  return null;
+}
+
+// Ward name labels component
+function WardLabels({ wards }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !wards || wards.length === 0) return;
+
+    const markers = wards.map(w => {
+      const icon = L.divIcon({
+        html: `<span style="font-size:10px; font-weight:600; color:#ffffff; text-shadow:0 1px 3px rgba(0,0,0,0.8); white-space:nowrap; pointer-events:none;">${w.ward_name}</span>`,
+        className: '',
+        iconAnchor: [0, 0],
+      });
+      return L.marker([w.lat, w.lng], { icon, interactive: false, zIndexOffset: 1000 });
+    });
+
+    const labelGroup = L.layerGroup(markers);
+    const toggleLabels = () => {
+      if (map.getZoom() >= 12) {
+        if (!map.hasLayer(labelGroup)) labelGroup.addTo(map);
+      } else {
+        if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup);
+      }
+    };
+
+    toggleLabels();
+    map.on('zoomend', toggleLabels);
+
+    return () => {
+      map.off('zoomend', toggleLabels);
+      if (map.hasLayer(labelGroup)) map.removeLayer(labelGroup);
+    };
+  }, [map, wards]);
+
+  return null;
+}
+
+// Click handler to find nearest ward
+function MapClickHandler({ wards, onWardClick }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const handler = (e) => {
+      // Simple nearest ward logic
+      let nearest = null;
+      let minDist = Infinity;
+      for (const ward of wards) {
+        const dist = Math.sqrt(Math.pow(ward.lat - e.latlng.lat, 2) + Math.pow(ward.lng - e.latlng.lng, 2));
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = ward;
+        }
+      }
+      if (nearest && minDist < 0.05) { // Only select if reasonably close
+        onWardClick(nearest);
+      }
+    };
+    map.on('click', handler);
+    return () => map.off('click', handler);
+  }, [map, wards, onWardClick]);
+
+  return null;
+}
 
 export default function AdminMap() {
   const toast = useToast();
   const [wards, setWards] = useState(WARDS_DATA);
   const [editingWard, setEditingWard] = useState(null);
   const [editScore, setEditScore] = useState('');
+
+  // Prepare points for heatmap: [lat, lng, intensity]
+  const heatPoints = wards.map(w => [w.lat, w.lng, w.risk_score / 100]);
 
   const saveRiskScore = (wardId) => {
     const score = parseInt(editScore);
@@ -19,26 +101,32 @@ export default function AdminMap() {
     toast.success('Risk score updated');
   };
 
+  const handleMapClick = (ward) => {
+    setEditingWard(ward);
+    setEditScore(String(ward.risk_score));
+  };
+
   return (
     <div className="page-wrapper section-container py-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Admin Risk Map</h1>
-          <p className="text-slate-400 text-sm">Click any ward to edit risk score</p>
+          <h1 className="text-2xl font-bold text-white">Admin Risk Heatmap</h1>
+          <p className="text-slate-400 text-sm">Click anywhere on the map to edit the nearest ward's risk score</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 glass-card overflow-hidden" style={{ height: '550px' }}>
-            <MapContainer center={BENGALURU_CENTER} zoom={11} style={{ height: '100%', width: '100%' }}>
+            <MapContainer center={BENGALURU_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="&copy; CARTO" />
-              {wards.map(w => (
-                <CircleMarker key={w.id} center={[w.lat, w.lng]}
-                  radius={w.risk_score > 75 ? 18 : w.risk_score > 50 ? 15 : 12}
-                  pathOptions={{ color: RISK_COLORS[w.risk_level]?.border, fillColor: RISK_COLORS[w.risk_level]?.fill, fillOpacity: RISK_OPACITY[w.risk_level], weight: 2 }}
-                  eventHandlers={{ click: () => { setEditingWard(w); setEditScore(String(w.risk_score)); } }}>
-                  <Tooltip><div className="text-center"><div className="font-semibold">{w.ward_name}</div><div className="text-xs">Risk: {w.risk_score}</div></div></Tooltip>
-                </CircleMarker>
-              ))}
+              
+              {/* Heatmap Layer */}
+              <HeatmapLayer points={heatPoints} />
+              
+              {/* Ward Labels */}
+              <WardLabels wards={wards} />
+
+              {/* Click handler for selection */}
+              <MapClickHandler wards={wards} onWardClick={handleMapClick} />
             </MapContainer>
           </div>
 

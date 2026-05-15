@@ -146,6 +146,10 @@ export default function Login() {
             >
               🛡️ {adminLoading ? t('auth.signingIn') : t('auth.loginAsAdmin')}
             </button>
+            
+            <p className="text-center text-[10px] text-slate-500 mt-2 italic">
+              Debug: admin@aquagrid.com / password123
+            </p>
           </form>
 
           <p className="text-center text-sm text-slate-500 mt-6">

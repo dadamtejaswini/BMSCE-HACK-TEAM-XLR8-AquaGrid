@@ -165,6 +165,7 @@ export default function MyOrders() {
 
   useEffect(() => {
     const fetchBookings = async () => {
+      let remoteBookings = [];
       if (isSupabaseConfigured && profile?.id && profile.id !== 'demo-user') {
         try {
           const { data, error } = await supabase
@@ -172,10 +173,14 @@ export default function MyOrders() {
             .select('*')
             .eq('user_id', profile.id)
             .order('created_at', { ascending: false });
-          setBookings(data && data.length > 0 ? data : MOCK_BOOKINGS);
+          
+          if (error && error.message.includes('Could not find the table')) {
+             remoteBookings = [];
+          } else {
+             remoteBookings = data || [];
+          }
 
-          // BUGFIX: Fetch submitted feedback booking IDs for this user, store in a Set
-          // (so feedback UI only appears for delivered orders without feedback)
+          // Fetch submitted feedback
           const { data: fbData, error: fbError } = await supabase
             .from('feedback')
             .select('booking_id')
@@ -185,11 +190,31 @@ export default function MyOrders() {
             setSubmittedFeedbackIds(new Set((fbData || []).map(r => r.booking_id)));
           }
         } catch {
-          setBookings(MOCK_BOOKINGS);
+          remoteBookings = [];
         }
-      } else {
-        setBookings(MOCK_BOOKINGS);
       }
+
+      // Load from localStorage fallback
+      let localBookings = [];
+      try {
+        localBookings = JSON.parse(localStorage.getItem('aquagrid_bookings_fallback') || '[]');
+        // Filter by user_id if logged in
+        if (profile?.id) {
+          localBookings = localBookings.filter(b => b.user_id === profile.id || !b.user_id);
+        }
+      } catch (e) {
+        console.error('Failed to load local bookings', e);
+      }
+
+      // Combine and remove duplicates (by booking_id)
+      const combined = [...localBookings, ...remoteBookings];
+      if (combined.length === 0) {
+        setBookings(MOCK_BOOKINGS);
+      } else {
+        const unique = Array.from(new Map(combined.map(b => [b.booking_id, b])).values());
+        setBookings(unique.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+      }
+      
       setLoading(false);
     };
     fetchBookings();
