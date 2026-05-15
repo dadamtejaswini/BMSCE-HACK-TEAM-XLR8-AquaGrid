@@ -1,122 +1,152 @@
-# 💧 AquaGrid — Smart Water Intelligence for Bengaluru
+# AquaGrid 💧
+> Know About Water Scarcity Before Anyone Else
 
-A full-stack water scarcity prediction and private water booking platform for Bengaluru. Real-time ward-level risk maps, 7-day forecasts, and guaranteed water delivery.
+**Tagline:** Real-time ward-level water scarcity prediction and private water tanker booking for Bengaluru.
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React.js (Vite) + Tailwind CSS v3 |
-| Backend | Node.js + Express.js |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (email/password) |
-| Maps | Leaflet.js + OpenStreetMap (CartoDB dark tiles) |
-| Charts | Recharts |
-| Email | Resend API |
-| APIs | OpenWeatherMap, NewsAPI |
+## 🚨 Problem Statement
+Bengaluru faces a severe water crisis:
+- 650 MLD daily water deficit
+- 46,427 properties without piped connections
+- No real-time early warning system for residents
+- No easy way to book private water tankers
 
-## Quick Start
+AquaGrid solves this with AI-powered scarcity prediction + an Uber-like water booking platform.
+
+---
+
+## 👥 Team Members — Team XLR8
+
+| Name | USN |
+|------|-----|
+| [Member 1 Name] | [USN] |
+| [Member 2 Name] | [USN] |
+| [Member 3 Name] | [USN] |
+| [Member 4 Name] | [USN] |
+
+Institution: BMS College of Engineering (BMSCE), Bengaluru
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- React 18 + Vite
+- Tailwind CSS (dark/light theme)
+- Leaflet.js + leaflet.heat (heatmap)
+- Recharts (data visualization)
+- react-i18next (EN / HI / KN)
+- Framer Motion (animations)
+
+### Backend
+- Node.js + Express.js
+- Supabase (PostgreSQL + Auth + Realtime)
+- Resend API (transactional emails)
+
+### Data & APIs
+- OpenWeatherMap API (live rainfall)
+- BWSSB/KGIS KML (30 real pump stations)
+- Bengaluru Building Dataset (1,250 buildings)
+- Seasonal reservoir model
+
+---
+
+## ✅ Features Implemented
+
+- 🗺️ Real-time ward-level water risk heatmap (20 Bengaluru wards)
+- 🤖 AI risk score engine (reservoir + rainfall + usage data)
+- 🚰 Private water tanker booking platform
+- 📧 Early email alerts when scarcity detected
+- 📦 Order tracking with real-time status updates
+- ⭐ Feedback system (post-delivery only)
+- 🛡️ Admin panel (orders, map, users, queries)
+- 🌐 Multi-language support (English, Hindi, Kannada)
+- 🌙 Dark / Light theme toggle
+- 📍 Location-based ward detection
+- 💧 30 real BWSSB pump station markers
+- 📊 7-day risk forecast per ward
+- 📱 Animated logo intro
+
+---
+
+## 📁 Project Structure
+
+AquaGrid/
+├── client/                  # React + Vite frontend
+│   ├── src/
+│   │   ├── components/      # Navbar, Footer, Modals
+│   │   ├── context/         # Auth, Toast, Theme
+│   │   ├── data/            # Ward data, mock data
+│   │   ├── i18n/            # EN / HI / KN locales
+│   │   ├── pages/           # All app pages + admin
+│   │   └── lib/             # Supabase client
+│   ├── .env.example
+│   └── tailwind.config.js
+├── server/                  # Node.js + Express backend
+│   ├── routes/              # bookings, auth, admin, etc.
+│   ├── services/           # Email service (Resend)
+│   └── .env.example
+├── supabase/
+│   └── migrations/          # SQL schema files
+├── screenshots/             # App screenshots
+├── presentation/            # Final PPT/PDF
+└── README.md
+
+---
+
+## ⚙️ Installation & Setup
 
 ### Prerequisites
-- Node.js 18+
-- npm
+- Node.js v18+
+- npm v9+
+- Supabase account (free tier works)
+- Resend account (free tier works)
+- OpenWeatherMap API key (free)
 
-### 1. Frontend (Client)
+### 1. Clone the repository
+```bash
+# Add your clone URL
+```
+
+### 2. Setup Client
 ```bash
 cd client
 npm install --legacy-peer-deps
+cp .env.example .env
 npm run dev
 ```
-Runs on `http://localhost:5173`
 
-### 2. Backend (Server)
+### 3. Setup Server
 ```bash
 cd server
 npm install
+cp .env.example .env
 npm run dev
 ```
-Runs on `http://localhost:3001`
 
-### 3. Database Setup
-Run the SQL files in your Supabase SQL Editor:
-1. `supabase/migrations/001_initial_schema.sql` — Creates all tables and policies
-2. `supabase/seed.sql` — Seeds 20 Bengaluru wards with risk data
+### 4. Setup Supabase
+1. Open Supabase SQL editor
+2. Run:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/seed.sql`
+3. Ensure RLS policies are enabled
 
-## Demo Mode
+---
 
-The app runs in **full demo mode** without any Supabase setup:
-- Click **"Demo Login"** on the navbar or login page
-- This logs you in as an admin user with mock data
-- All pages render with realistic mock data
-- No external API calls required
+## 🧪 Demo Mode
+The app can run in demo mode without external Supabase setup.
+- Use the **Demo Login** option on the navbar/login page
+- App will render with mock data.
 
-## Environment Variables
+---
 
-### Client (`client/.env`)
-```
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_RAZORPAY_KEY_ID=your-razorpay-key (optional)
-```
+## 🔒 Security Notes
+- Never commit real Supabase service role keys to GitHub.
+- Use environment variables (`.env`) for secrets.
 
-### Server (`server/.env`)
-```
-PORT=3001
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-OPENWEATHERMAP_API_KEY=your-key
-NEWS_API_KEY=your-key
-RESEND_API_KEY=your-key
-RAZORPAY_KEY_SECRET=your-key (optional)
-```
+---
 
-## Pages
+## 📝 License
+Private project for BMSCE Hackathon.
 
-| Route | Description | Protected |
-|-------|-------------|-----------|
-| `/` | Landing page with hero, ward map, features | No |
-| `/map` | Full interactive ward risk map | No |
-| `/forecast` | 7-day water forecast with charts | No |
-| `/compare` | BBMP vs AquaGrid comparison | No |
-| `/register` | Multi-step registration form | No |
-| `/login` | Login page | No |
-| `/book-water` | Water delivery booking form | Yes |
-| `/request-water` | Report water issues | Yes |
-| `/my-orders` | Order history with live status | Yes |
-| `/feedback/:id` | Post-delivery feedback | Yes |
-| `/admin` | Admin dashboard | Admin |
-| `/admin/orders` | Order management table | Admin |
-| `/admin/map` | Admin risk map editor | Admin |
-| `/admin/users` | User management | Admin |
-
-## Database Schema
-
-7 tables: `users`, `wards`, `user_reports`, `water_bookings`, `feedback`, `risk_data_log`, `survey_responses`
-
-See `supabase/migrations/001_initial_schema.sql` for full schema with RLS policies.
-
-## Risk Score Engine
-
-Risk calculation per ward (0–100):
-- **Reservoir Score**: Inverted level (low = high risk) — up to 40 points
-- **Rainfall Score**: No rain in 7 days → +20 points
-- **Report Score**: User reports × 5, capped at 30
-- **News Score**: News mentions × 3, capped at 15
-- **Seasonal Score**: March–June +15, Monsoon −10
-
-Risk levels: Green (0–25) → Blue (26–50) → Orange (51–75) → Critical (76–100)
-
-## Color Scheme
-
-- Primary: Blue (#1E40AF → #2563EB → #3B82F6)
-- Secondary: Slate (#0F172A, #1E293B)
-- Accent: Cyan (#06B6D4)
-- Warning: Amber (#F59E0B)
-- Critical: Rose (#F43F5E)
-- Success: Emerald (#10B981)
-- **No white backgrounds** — slate-900/slate-800 base throughout
-
-## License
-
-Private project for MCA Hackathon.

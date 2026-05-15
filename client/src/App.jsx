@@ -2,11 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import ReportWaterIssue from './components/ReportWaterIssue';
 import Landing from './pages/Landing';
 import MapPage from './pages/MapPage';
 import Forecast from './pages/Forecast';
-import Compare from './pages/Compare';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import BookWater from './pages/BookWater';
@@ -53,7 +51,6 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/forecast" element={<Forecast />} />
-          <Route path="/compare" element={<Compare />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/request-water" element={
@@ -84,7 +81,6 @@ function App() {
         </Routes>
       </main>
       <Footer />
-      <ReportWaterIssue />
     </div>
   );
 }

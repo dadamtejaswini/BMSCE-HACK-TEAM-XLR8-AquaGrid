@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,6 @@ const navLinks = [
   { path: '/', label: 'nav.home' },
   { path: '/map', label: 'nav.map' },
   { path: '/forecast', label: 'nav.forecast' },
-  { path: '/compare', label: 'nav.compare' },
 ];
 
 const protectedLinks = [
@@ -32,9 +31,16 @@ const adminLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
-  const { user, profile, isAuthenticated, isAdmin, signOut, demoLogin } = useAuth();
+  const { user, profile, isAuthenticated, isAdmin, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+    setMobileOpen(false);
+  };
 
   const isActive = (path) => location.pathname === path;
 
@@ -123,22 +129,7 @@ export default function Navbar() {
 
           {/* Language switcher + Auth buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Language switcher */}
-            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-              {LANGUAGES.map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => changeLanguage(lang.code)}
-                  className={`px-2.5 py-1.5 text-xs font-medium transition-all ${
-                    i18n.language === lang.code
-                      ? 'bg-blue-500/20 text-cyan-400'
-                      : 'text-slate-400 hover:text-blue-300'
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
+
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
@@ -146,7 +137,7 @@ export default function Navbar() {
                   <span className="text-blue-300 font-medium">{profile?.name || user?.email?.split('@')[0]}</span>
                 </div>
                 <button
-                  onClick={signOut}
+                  onClick={handleSignOut}
                   className="px-4 py-2 text-sm text-slate-400 hover:text-rose-400 border border-slate-700 rounded-lg hover:border-rose-500/40 transition-all"
                 >
                   {t('nav.signOut')}
@@ -154,12 +145,6 @@ export default function Navbar() {
               </div>
             ) : (
               <>
-                <button
-                  onClick={demoLogin}
-                  className="px-4 py-2 text-sm text-cyan-400 hover:text-cyan-300 border border-cyan-600/30 rounded-lg hover:border-cyan-500/50 transition-all"
-                >
-                  {t('nav.demoLogin')}
-                </button>
                 <Link to="/login" className="px-4 py-2 text-sm text-slate-300 hover:text-blue-300 transition-colors">
                   {t('nav.login')}
                 </Link>
@@ -237,14 +222,11 @@ export default function Navbar() {
 
                 <div className="pt-4 border-t border-blue-800/30 space-y-2 px-4">
                   {isAuthenticated ? (
-                    <button onClick={() => { signOut(); setMobileOpen(false); }} className="w-full btn-secondary text-sm">
+                    <button onClick={handleSignOut} className="w-full btn-secondary text-sm">
                       {t('nav.signOut')}
                     </button>
                   ) : (
                     <>
-                      <button onClick={() => { demoLogin(); setMobileOpen(false); }} className="w-full btn-secondary text-sm !border-cyan-600/40 !text-cyan-400">
-                        {t('nav.demoLogin')}
-                      </button>
                       <Link to="/login" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-secondary text-sm">{t('nav.login')}</Link>
                       <Link to="/register" onClick={() => setMobileOpen(false)} className="block w-full text-center btn-primary text-sm">{t('nav.register')}</Link>
                     </>

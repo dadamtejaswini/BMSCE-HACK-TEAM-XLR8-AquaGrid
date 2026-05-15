@@ -158,7 +158,8 @@ export default function MyOrders() {
   const { profile } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState({});
+  // Track which bookings already have feedback submitted (by booking UUID id)
+  const [submittedFeedbackIds, setSubmittedFeedbackIds] = useState(() => new Set());
   const [queryModal, setQueryModal] = useState({ open: false, bookingId: null });
   const [feedbackModal, setFeedbackModal] = useState({ open: false, booking: null });
 
@@ -173,19 +174,15 @@ export default function MyOrders() {
             .order('created_at', { ascending: false });
           setBookings(data && data.length > 0 ? data : MOCK_BOOKINGS);
 
-          // Check which bookings already have feedback
-          if (data && data.length > 0) {
-            const bookingIds = data.filter(b => b.status === 'delivered').map(b => b.id);
-            if (bookingIds.length > 0) {
-              const { data: fbData } = await supabase
-                .from('feedback')
-                .select('booking_id')
-                .eq('user_id', profile.id)
-                .in('booking_id', bookingIds);
-              const fbMap = {};
-              fbData?.forEach(f => { fbMap[f.booking_id] = true; });
-              setFeedbackSubmitted(fbMap);
-            }
+          // BUGFIX: Fetch submitted feedback booking IDs for this user, store in a Set
+          // (so feedback UI only appears for delivered orders without feedback)
+          const { data: fbData, error: fbError } = await supabase
+            .from('feedback')
+            .select('booking_id')
+            .eq('user_id', profile.id);
+
+          if (!fbError) {
+            setSubmittedFeedbackIds(new Set((fbData || []).map(r => r.booking_id)));
           }
         } catch {
           setBookings(MOCK_BOOKINGS);
@@ -212,7 +209,11 @@ export default function MyOrders() {
 
   // Optimistic update: mark feedback as submitted locally
   const handleFeedbackSubmitted = (bookingId) => {
-    setFeedbackSubmitted(prev => ({ ...prev, [bookingId]: true }));
+    setSubmittedFeedbackIds(prev => {
+      const next = new Set(prev);
+      next.add(bookingId);
+      return next;
+    });
   };
 
   if (loading) return (
@@ -245,7 +246,7 @@ export default function MyOrders() {
               const statusCfg = STATUS_CONFIG[b.status] || STATUS_CONFIG.pending;
               const qty = QUANTITY_OPTIONS.find(q => q.value === b.quantity);
               const slot = TIME_SLOTS.find(s => s.value === b.delivery_slot);
-              const hasFeedback = feedbackSubmitted[b.id];
+              const hasFeedback = submittedFeedbackIds.has(b.id);
               const canLeaveFeedback = b.status === 'delivered' && !hasFeedback;
               return (
                 <motion.div key={b.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">

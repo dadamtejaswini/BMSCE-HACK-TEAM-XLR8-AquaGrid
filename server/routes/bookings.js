@@ -53,12 +53,15 @@ router.put('/:id/status', async (req, res) => {
 
     // Send emails on status change
     if (data && data.user_id) {
-      const { data: userData } = await supabaseAdmin.from('users').select('*').eq('id', data.user_id).single();
-      if (userData) {
-        // Generic status email (confirmed, out_for_delivery, cancelled, etc.)
-        await sendStatusEmail(userData, data, status);
+      // Fetch user email from Supabase users table using booking's user_id
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('id, name, email')
+        .eq('id', data.user_id)
+        .single();
 
-        // Dedicated delivery confirmation email when delivered
+      if (userData?.email) {
+        // If delivered: send ONLY the dedicated delivery confirmation email
         if (status === 'delivered') {
           await sendDeliveryConfirmationEmail(userData.email, {
             bookingId: data.booking_id,
@@ -66,6 +69,9 @@ router.put('/:id/status', async (req, res) => {
             litres: data.quantity,
             deliveredAt: new Date().toISOString(),
           });
+        } else {
+          // Generic status email (confirmed, out_for_delivery, cancelled, etc.)
+          await sendStatusEmail(userData, data, status);
         }
       }
     }
@@ -77,4 +83,3 @@ router.put('/:id/status', async (req, res) => {
 });
 
 module.exports = router;
-

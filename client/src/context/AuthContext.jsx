@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { MOCK_USERS } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
@@ -14,48 +13,90 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(!isSupabaseConfigured);
 
   // Load user profile from users table
   const loadProfile = useCallback(async (authUser) => {
     if (!authUser) {
       setProfile(null);
-      return;
+      return null;
     }
 
     if (!isSupabaseConfigured) {
-      setProfile(MOCK_USERS[0]);
-      return;
+      console.warn('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+      setProfile(null);
+      return null;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+    const profileTimeoutMs = 6000;
 
-      if (error && error.code !== 'PGRST116') {
+    try {
+      const { data, error } = await Promise.race([
+        // Support both possible schema variants:
+        // 1) users.id == auth.users.id
+        // 2) users.auth_id == auth.users.id
+        (async () => {
+          const byId = supabase.from('users').select('*').eq('id', authUser.id).single();
+          const { data: byAuthId, error: authIdError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('auth_id', authUser.id)
+            .single();
+
+          // If byId succeeds, use it; otherwise fall back to auth_id
+          const byIdRes = await byId.catch(() => ({ data: null, error: { code: 'NOT_FOUND' } }));
+          if (byIdRes?.data) return byIdRes;
+          return { data: byAuthId, error: authIdError };
+        })(),
+        new Promise((resolve) => setTimeout(() => resolve({ data: null, error: { code: 'TIMEOUT', message: 'Profile load timed out' } }), profileTimeoutMs)),
+      ]);
+
+      if (error && error.code !== 'PGRST116' && error.code !== 'TIMEOUT') {
         console.error('Error loading profile:', error);
       }
+
+      // If profile not found in Supabase, DO NOT hydrate from localStorage.
+      // User must select their own ward (and enter details) to proceed.
+      // (Earlier demo fallback caused stale/incorrect user data to appear.)
+      if (!data) {
+        setProfile(null);
+        return null;
+      }
+
       setProfile(data || null);
+      return data || null;
     } catch (err) {
       console.error('Profile load error:', err);
+      setProfile(null);
+      return null;
     }
   }, []);
 
   // Initialize auth state
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      console.warn('Supabase is not configured. App running without authentication.');
       setLoading(false);
       return;
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const SESSION_TIMEOUT_MS = 8000;
+
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => resolve({ data: { session: null } }), SESSION_TIMEOUT_MS);
+    });
+
+    Promise.race([
+      supabase.auth.getSession(),
+      timeoutPromise,
+    ]).then(({ data: { session } }) => {
       const authUser = session?.user || null;
       setUser(authUser);
       loadProfile(authUser);
+      setLoading(false);
+    }).catch(() => {
+      setUser(null);
+      setProfile(null);
       setLoading(false);
     });
 
@@ -74,10 +115,7 @@ export function AuthProvider({ children }) {
   // Sign up with email and password
   const signUp = async (email, password) => {
     if (!isSupabaseConfigured) {
-      // Demo mode: simulate signup
-      const demoUser = { id: 'demo-' + Date.now(), email };
-      setUser(demoUser);
-      return { data: { user: demoUser }, error: null };
+      return { data: null, error: { message: 'Database not configured. Please set up Supabase credentials.' } };
     }
 
     const { data, error } = await supabase.auth.signUp({ email, password });
@@ -87,36 +125,62 @@ export function AuthProvider({ children }) {
   // Sign in
   const signIn = async (email, password) => {
     if (!isSupabaseConfigured) {
-      // Demo mode: simulate signin
-      const demoUser = { id: 'demo-user', email, user_metadata: {} };
-      setUser(demoUser);
-      setProfile(MOCK_USERS[0]);
-      return { data: { user: demoUser }, error: null };
+      return { data: null, error: { message: 'Database not configured. Please set up Supabase credentials.' } };
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (!error && data?.user) {
+        // Load profile, but never block login forever
+        const profileTimeoutMs = 6000;
+        try {
+          await Promise.race([
+            loadProfile(data.user),
+            new Promise((resolve) => setTimeout(resolve, profileTimeoutMs)),
+          ]);
+        } catch {
+          // ignore profile load errors here; session is still valid
+        }
+      }
+
+      return { data, error };
+    } catch (e) {
+      return { data: null, error: { message: e?.message || 'Sign-in failed' } };
+    }
   };
 
   // Sign out
   const signOut = async () => {
-    if (!isSupabaseConfigured) {
+    try {
+      if (isSupabaseConfigured) {
+        // ensure we clear session even if supabase call fails/hangs
+        const signOutTimeoutMs = 5000;
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise((resolve) => setTimeout(resolve, signOutTimeoutMs)),
+        ]);
+      }
+    } catch {
+      // ignore
+    } finally {
       setUser(null);
       setProfile(null);
-      return;
-    }
 
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
+      // Also clear any cached session keys if present
+      try {
+        localStorage.removeItem('sb-access-token');
+        localStorage.removeItem('sb-refresh-token');
+        // clear demo fallback profile
+        localStorage.removeItem('aquagrid_profile_fallback');
+      } catch {}
+    }
   };
 
   // Save user profile — accepts explicit userId to avoid null user race condition
   const saveProfile = async (profileData, explicitUserId = null) => {
     if (!isSupabaseConfigured) {
-      const newProfile = { ...MOCK_USERS[0], ...profileData };
-      setProfile(newProfile);
-      return { data: newProfile, error: null };
+      return { data: null, error: { message: 'Database not configured. Please set up Supabase credentials.' } };
     }
 
     const userId = explicitUserId || user?.id;
@@ -128,15 +192,49 @@ export function AuthProvider({ children }) {
     const userEmail = profileData.email || user?.email;
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .upsert({
-          ...profileData,
-          id: userId,
-          email: userEmail,
-        }, { onConflict: 'id' })
-        .select()
-        .single();
+      // Support both schema variants:
+      // - public.users has PK `id` matching auth.users.id
+      // - OR it has column `auth_id` matching auth.users.id
+      // Try upsert by `id` first; if it errors, upsert by `auth_id`.
+
+      const upsertById = async () => {
+        const { data, error } = await supabase
+          .from('users')
+          .upsert(
+            {
+              ...profileData,
+              id: userId,
+              email: userEmail,
+            },
+            { onConflict: 'id' }
+          )
+          .select()
+          .single();
+        return { data, error };
+      };
+
+      const upsertByAuthId = async () => {
+        const { data, error } = await supabase
+          .from('users')
+          .upsert(
+            {
+              ...profileData,
+              auth_id: userId,
+              email: userEmail,
+            },
+            { onConflict: 'auth_id' }
+          )
+          .select()
+          .single();
+        return { data, error };
+      };
+
+      let { data, error } = await upsertById();
+      if (error) {
+        const fallback = await upsertByAuthId();
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         console.error('saveProfile error:', error);
@@ -151,28 +249,18 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Demo login (no credentials needed)
-  const demoLogin = () => {
-    const demoUser = { id: 'demo-user', email: 'demo@aquagrid.in', user_metadata: {} };
-    setUser(demoUser);
-    setProfile(MOCK_USERS[0]);
-    setIsDemoMode(true);
-  };
-
   const isAdmin = profile?.role === 'admin' || user?.app_metadata?.role === 'admin';
 
   const value = {
     user,
     profile,
     loading,
-    isDemoMode,
     isAdmin,
     isAuthenticated: !!user,
     signUp,
     signIn,
     signOut,
     saveProfile,
-    demoLogin,
     loadProfile,
   };
 

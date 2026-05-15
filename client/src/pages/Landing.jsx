@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-le
 import L from 'leaflet';
 import 'leaflet.heat';
 import { useAuth } from '../context/AuthContext';
+import ReportWaterIssue from '../components/ReportWaterIssue';
 import { WARDS_DATA, RISK_COLORS, BENGALURU_CENTER, DEFAULT_ZOOM, HEATMAP_OPTIONS, findNearestWard, isInBengaluru } from '../data/wards';
 import { MOCK_FEEDBACK, generateForecastData } from '../data/mockData';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer } from 'recharts';
@@ -444,6 +445,8 @@ export default function Landing() {
           </div>
         </motion.div>
       </section>
+
+      <ReportWaterIssue />
 
       {/* ===== PUBLIC FEEDBACK STRIP ===== */}
       <section className="section-container mb-16">

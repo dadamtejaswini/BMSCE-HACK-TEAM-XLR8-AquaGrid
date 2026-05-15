@@ -19,6 +19,20 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    react: {
+      useSuspense: false,
+    },
   });
+
+// Sync language change to localStorage whenever it changes
+i18n.on('languageChanged', (lng) => {
+  localStorage.setItem('aquagrid_lang', lng);
+  document.documentElement.lang = lng;
+});
+
+// Apply saved language to html element on init
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = savedLang || 'en';
+}
 
 export default i18n;
