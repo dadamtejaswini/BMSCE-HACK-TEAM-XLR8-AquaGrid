@@ -25,7 +25,6 @@ export default function BookWater() {
     quantity: '',
     delivery_date: '',
     delivery_slot: '',
-    payment_method: '',
     special_notes: '',
   });
 
@@ -64,7 +63,6 @@ export default function BookWater() {
     if (!form.quantity) return toast.error('Please select quantity');
     if (!form.delivery_date) return toast.error('Please select delivery date');
     if (!form.delivery_slot) return toast.error('Please select a time slot');
-    if (!form.payment_method) return toast.error('Please select payment method');
 
     setLoading(true);
     const bookingId = generateBookingId();
@@ -76,7 +74,7 @@ export default function BookWater() {
       quantity: form.quantity,
       delivery_date: form.delivery_date,
       delivery_slot: form.delivery_slot,
-      payment_method: form.payment_method,
+      payment_method: 'cash',
       special_notes: form.special_notes,
       status: 'pending',
       booking_id: bookingId,

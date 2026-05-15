@@ -58,5 +58,4 @@ ________________________________________
 •	Mobile Application: Developing dedicated Android and iOS apps with push notifications for live booking updates and emergency alerts.
 •	Payment Gateway Integration: Adding secure UPI, Credit/Debit card, and Wallet options for seamless digital transactions.
 •	Water Quality Monitoring: Integration of real-time IoT bio-sensors to detect pathogens and chemical pollutants instantly at the source, utilizing Edge AI for autonomous safety alerts.
-________________________________________
-8. Screenshots & Demo
+
