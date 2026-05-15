@@ -1,0 +1,330 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   AquaGrid — Global Styles
+   Color Palette:
+   #132A3A — darkest (backgrounds, navbar, cards)
+   #3E5F78 — medium (borders, secondary buttons, hover)
+   #9FB7C8 — lightest (headings, icons, labels)
+   ============================================ */
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #132A3A;
+    color: #9FB7C8;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #132A3A;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3E5F78;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9FB7C8;
+  }
+
+  ::selection {
+    background: rgba(62, 95, 120, 0.5);
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    @apply backdrop-blur-sm rounded-2xl;
+    background: rgba(19, 42, 58, 0.8);
+    border: 1px solid rgba(62, 95, 120, 0.4);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  .glass-card-hover:hover {
+    background: rgba(19, 42, 58, 0.95);
+    border-color: rgba(159, 183, 200, 0.3);
+    box-shadow: 0 4px 20px rgba(19, 42, 58, 0.5);
+  }
+
+  /* Gradient button */
+  .btn-primary {
+    @apply text-white font-semibold px-6 py-3 rounded-xl 
+           transition-all duration-300 hover:scale-105 hover:shadow-lg
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+    background: #3E5F78;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #9FB7C8;
+    color: #132A3A;
+    box-shadow: 0 4px 20px rgba(62, 95, 120, 0.4);
+  }
+
+  .btn-secondary {
+    @apply font-semibold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95;
+    background: rgba(62, 95, 120, 0.3);
+    color: #9FB7C8;
+    border: 1px solid rgba(62, 95, 120, 0.5);
+  }
+  .btn-secondary:hover {
+    background: rgba(62, 95, 120, 0.5);
+    border-color: #9FB7C8;
+  }
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-rose-600 to-rose-500 text-white font-semibold px-6 py-3 rounded-xl
+           transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-rose-500/25 active:scale-95;
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-green { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
+  .badge-blue { @apply bg-blue-500/20 text-blue-400 border border-blue-500/30; }
+  .badge-amber { @apply bg-amber-500/20 text-amber-400 border border-amber-500/30; }
+  .badge-rose { @apply bg-rose-500/20 text-rose-400 border border-rose-500/30; }
+  .badge-cyan { @apply bg-cyan-500/20 text-cyan-400 border border-cyan-500/30; }
+
+  /* Input fields */
+  .input-field {
+    @apply w-full rounded-xl px-4 py-3 
+           focus:outline-none focus:ring-2
+           transition-all duration-200;
+    background: rgba(19, 42, 58, 0.9);
+    border: 1px solid rgba(62, 95, 120, 0.4);
+    color: #9FB7C8;
+  }
+  .input-field::placeholder {
+    color: rgba(159, 183, 200, 0.4);
+  }
+  .input-field:focus {
+    border-color: #9FB7C8;
+    box-shadow: 0 0 0 3px rgba(159, 183, 200, 0.15);
+  }
+
+  .input-label {
+    @apply block text-sm font-medium mb-2;
+    color: #9FB7C8;
+  }
+
+  /* Frosted glass toast */
+  .toast-glass {
+    @apply backdrop-blur-md rounded-2xl shadow-lg px-6 py-4;
+    background: rgba(62, 95, 120, 0.85);
+    border: 1px solid rgba(159, 183, 200, 0.3);
+    color: #ffffff;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply bg-[length:200%_100%] animate-shimmer rounded-xl;
+    background-image: linear-gradient(to right, #132A3A, #3E5F78, #132A3A);
+  }
+
+  /* Section container */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Page wrapper with fade-in */
+  .page-wrapper {
+    @apply min-h-screen animate-fade-in;
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, #9FB7C8, #3E5F78);
+  }
+
+  .text-gradient-warm {
+    @apply bg-gradient-to-r from-amber-400 to-rose-400 bg-clip-text text-transparent;
+  }
+
+  /* Glow effects */
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(62, 95, 120, 0.4), 0 0 60px rgba(62, 95, 120, 0.15);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 60px rgba(6, 182, 212, 0.1);
+  }
+
+  .glow-rose {
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.3), 0 0 60px rgba(244, 63, 94, 0.1);
+  }
+}
+
+/* ============================================
+   Leaflet Dark Theme Overrides
+   ============================================ */
+.leaflet-container {
+  background: #132A3A !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(19, 42, 58, 0.95) !important;
+  color: #9FB7C8 !important;
+  border: 1px solid #3E5F78 !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(19, 42, 58, 0.95) !important;
+  border: 1px solid #3E5F78 !important;
+}
+
+.leaflet-popup-close-button {
+  color: #9FB7C8 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(19, 42, 58, 0.9) !important;
+  color: #9FB7C8 !important;
+  border: 1px solid #3E5F78 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #3E5F78 !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(19, 42, 58, 0.7) !important;
+  color: #3E5F78 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #9FB7C8 !important;
+}
+
+.leaflet-tooltip {
+  background: rgba(19, 42, 58, 0.95) !important;
+  color: #9FB7C8 !important;
+  border: 1px solid #3E5F78 !important;
+  border-radius: 12px !important;
+  padding: 8px 14px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: rgba(19, 42, 58, 0.95) !important;
+}
+
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: rgba(19, 42, 58, 0.95) !important;
+}
+
+/* ============================================
+   Water Ripple Animation (SVG)
+   ============================================ */
+.water-ripple {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(159, 183, 200, 0.2);
+  animation: rippleExpand 4s ease-out infinite;
+}
+
+.water-ripple:nth-child(2) {
+  animation-delay: 1s;
+}
+
+.water-ripple:nth-child(3) {
+  animation-delay: 2s;
+}
+
+@keyframes rippleExpand {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.6;
+  }
+  100% {
+    width: 500px;
+    height: 500px;
+    opacity: 0;
+  }
+}
+
+/* Recharts dark theme */
+.recharts-cartesian-axis-tick-value {
+  fill: #9FB7C8 !important;
+  font-size: 12px !important;
+}
+
+.recharts-legend-item-text {
+  color: #9FB7C8 !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(19, 42, 58, 0.95) !important;
+  border: 1px solid #3E5F78 !important;
+  border-radius: 12px !important;
+  color: #9FB7C8 !important;
+}
+
+/* Star rating */
+.star-rating .star {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #3E5F78;
+}
+
+.star-rating .star.filled {
+  color: #F59E0B;
+}
+
+.star-rating .star.hovered {
+  color: #FBBF24;
+  transform: scale(1.2);
+}
+
+/* Page transition */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
